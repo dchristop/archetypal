@@ -1,0 +1,363 @@
+---
+title: "Introduction to Archetypal Package"
+author: "Demetris T. Christopoulos"
+date: "7/6/2019"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Introduction to Archetypal Package}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+```{css, echo=FALSE}
+    body .main-container {
+      max-width: 1024px !important;
+      width: 1024px !important;
+    }
+    body {
+      max-width: 1024px !important;
+    }
+```
+
+```{r setup, include=FALSE}
+library(archetypal)
+knitr::opts_chunk$set(echo = TRUE)
+options(max.width = 1000)
+options(max.print = 100000)
+```
+
+## Archetypal Analysis (AA)
+
+Archetypal Analysis (AA) is different from Cluster Analysis (CA) because it focus on the extreme points
+that usually are closer to the Convex Hull (CH) and not inside the cloud of points as in CA or other centroid analyses.
+
+Here we implement a view which is common in Econometrics.
+The usual data frame "df" is a matrix Y with dimension $n \times d$, where n is the number or rows--observations
+and d is the number of variables or the dimension of the relevant Linear Space $R^n$.
+
+The output of our AA algorithm gives matrices A, B such that:
+$$
+Y\sim\,A\,B\,Y
+$$
+or if we want to be more strict our $kappas\times\,d$ matrix of archetypes $B\,Y$ is such that next squared Frobenius norm is minimum
+$$
+SSE=\|Y-A\,B\,Y \|^2 = minimum
+$$
+A ($n\times\,kappas$) and B ($kappas\times\,n$ ) are row stochastic matrices.
+We also define the Variance Explained as next:
+$$
+varexpl=\frac{SST-SSE}{SST}
+$$
+with SST the total sum of squares for elements of Y.
+
+It is a suitable modification of PCHA algorithm, see [1], [2], which uses data frames without transposing them
+and has full control to all external and internal parameteres of it.
+
+## Compute AA for a data frame
+
+Lets first create some 2D points that will certainly be a convex combination of three outer points:
+
+```{r 2D, echo=TRUE}
+library(archetypal)
+p1=c(1,2);p2=c(3,5);p3=c(7,3) 
+dp=rbind(p1,p2,p3);dp
+set.seed(9102)
+pts=t(sapply(1:100, function(i,dp){
+  cc=runif(3)
+  cc=cc/sum(cc)
+  colSums(dp*cc)
+},dp))
+df=data.frame(pts)
+colnames(df)=c("x","y")
+head(df)
+```
+Data frame dp is the three points of the outer triangle and df is our data set for AA, lets plot all:
+
+```{r plot2D, echo=FALSE,out.width='75%', fig.align='center',fig.width=10, fig.height=6}
+
+plot(dp,pch=3,cex=2,xlab='x',ylab='y',xlim=c(min(dp[,1])-0.25,max(dp[,1])+0.25),ylim=c(min(dp[,2])-0.25,max(dp[,2])+0.25))
+points(df,col='blue',pch=19,cex=0.7)
+polygon(rbind(dp,dp[1,]),lty=2)
+```
+
+The above mentioned data frame "df" can be loaded as:
+```{r load2D, echo=TRUE}
+# data("wd2")
+# df=wd2
+```
+
+Since number of archetypes is kappas=3 due to the construction we run "archetypal" function with three archetypes:
+
+```{r run2D, echo=TRUE}
+aa=archetypal(df=df,kappas = 3,verbose = TRUE,rseed=9102,save_history = TRUE)
+```
+What is the result? A list with names:
+
+```{r out2D, echo=TRUE}
+names(aa)
+
+```
+More specifically:
+
+1. BY is the archetypes as matrix, each row is an archetype
+
+2. A, B matrices, SSE and varexpl as they were defined in (AA)
+
+3. initialsolution gives the rows that were used as initial points in algorithm
+
+4. freqstable is a frequncy table for all candidate initial points found
+
+5. iterations are the number of main iterations done by algorithm
+
+6. time is the seconds ellapsed for the entire process
+
+7. converges is a TRUE/FALSE flag to inform us if convergence criteria were achieved before the maximum iterations
+(default=2000) reached
+
+8. nAup, nAdown, nBup, nBdown are for deep inspection of PCHA algorithm
+
+9. run_results is a list with "iterations" lists each one having next components:
+    - SSE
+    - varexpl
+    - B
+    - BY
+  
+
+
+The archetypes are indeed on the outer boundary, more precicely they form a principal convex hull of data points:
+
+```{r archplot, echo=FALSE,out.width='75%', fig.align='center',fig.width=10, fig.height=6}
+plot(dp,pch=3,cex=2,xlab='x',ylab='y',xlim=c(min(dp[,1])-0.25,max(dp[,1])+0.25),ylim=c(min(dp[,2])-0.25,max(dp[,2])+0.25))
+points(df,col='blue',pch=19,cex=0.7)
+polygon(rbind(dp,dp[1,]),lty=2)
+archs=data.frame(aa$BY)
+points(archs,col='blue',pch=15,cex=2)
+polygon(rbind(archs,archs[1,]),col=rgb(0, 0, 1,0.5)) 
+```
+If you observe a little bit more the above Figure, then you'll see that the inner triangle is approximately
+similar to the outer one, which is the true solution, although not present inside the data set.
+
+Lets plot the convergence process for SSE and all iterations:
+
+```{r sse_conv, echo=FALSE,out.width='75%', fig.align='center',fig.width=10, fig.height=6}
+vsse=aa$run_results$SSE
+plot(vsse,xlab="Iteration",ylab="SSE",pch=19, col="blue",type="b")
+grid()
+```
+It seems that all the "hard work" has been done during the first 30 iterations.
+
+But we can check the quality of our solution. Look how the final archetypes are precisely being created from
+data points and what are the relevant used weights for that task:
+
+```{r checkB, echo=TRUE}
+BB=aa$B
+yy=check_Bmatrix(B=BB,print.details = TRUE)
+# yy$used_rows
+# yy$used_weights
+```
+What is exactly the CH of our data set? We can use the "chull" function and find it since it is a 2D data set:
+
+```{r ch2d, echo=TRUE}
+ch=chull(df)
+ch
+df[ch,]
+```
+So our used rows in AA indeed belong to CH:
+
+```{r checkBCH, echo=TRUE}
+yy$used_rows
+unlist(yy$used_rows)%in%ch
+```
+
+**Question** Can we further decrease the computation time?
+
+   **Answer**  Yes, if we use cleverly the B matrix
+
+Lets plot the final used points:
+
+```{r Barchplot, echo=FALSE,out.width='75%', fig.align='center',fig.width=10, fig.height=6}
+plot(dp,pch=3,cex=2,xlab='x',ylab='y',xlim=c(min(dp[,1])-0.25,max(dp[,1])+0.25),ylim=c(min(dp[,2])-0.25,max(dp[,2])+0.25))
+points(df,col='blue',pch=19,cex=0.7)
+polygon(rbind(dp,dp[1,]),lty=2)
+archs=data.frame(aa$BY)
+points(archs,col='blue',pch=15,cex=2)
+pp=lapply(yy$used_rows,function(x,df){points(df[x,],col='red',type='b',pch=19);lines(df[x,],col='red',lwd=2)},df)
+```
+
+Watch now that the final archetypes are points "somewhere" on the line segments connecting the final used points, with 
+weights given by function "check_Bmatrix()". From the relevant weights we observe that archetypes are closer to 
+the first points of every list element, so it is reasonable to try as initial solution the vector of rows c(34,62,86), because they have the greatest weights:
+
+```{r run2Dinitial, echo=TRUE}
+aa2=archetypal(df=df,kappas = 3,initialrows =  c(34,62,86), verbose = TRUE,rseed=9102,save_history = TRUE)
+yy2=check_Bmatrix(aa2$B,print.details = TRUE)
+```
+
+The same solution as before, but with 44 instead of 63 ierations!
+
+ * **Rule of thumb:** If initial points are close to exact CH vertices, then algorithm runs faster
+
+#### Now we' ll try a 3D example.
+
+```{r plot3D, echo=TRUE,out.width='100%', fig.align='center',fig.width=17, fig.height=9}
+library(plot3D)
+#
+p1=c(3,0,0);p2=c(0,5,0);p3=c(3,5,7);p4=c(0,0,0);
+dp=data.frame(rbind(p1,p2,p3,p4));dp=dp[chull(dp),];colnames(dp)=c("x","y","z")
+set.seed(9102)
+df=data.frame(t(sapply(1:100, function(i,dp){
+  cc=runif(4)
+  cc=cc/sum(cc)
+  colSums(dp*cc)
+},dp)))
+colnames(df)=c("x","y","z")
+scatter3D(x=dp$x,y=dp$y,z=dp$z,colvar=NULL,lwd = 2, d = 3,xlab='x',ylab='y',zlab='z',theta=120,phi=15,
+          main = "Generators and Data Points", bty ="g",ticktype = "detailed",col='black',pch=10,cex=2.5)
+points3D(x=df$x,y=df$y,z=df$z,col='blue',add=T,pch=19)
+```
+
+The above data frame (without the generating edges) can be loaded as:
+
+```{r load3D, echo=TRUE}
+# data("wd3")
+# df=wd3
+```
+
+(Data frames are equal at least untill the 16th decimal point.)
+
+We run "archetypal" function with kappas=4 (due to the construction procedure) and then we also check the final B matrix:
+
+```{r run3D, echo=TRUE}
+aa3=archetypal(df=df,kappas = 4,verbose = TRUE,rseed=9102,save_history = TRUE)
+yy3=check_Bmatrix(aa3$B)
+```
+Well done, but can we work with less iterations?
+Lets choose the greatest weighted points from the finally used and then run "archetypal" with those "initialrows":
+
+```{r run3DuseBetas, echo=TRUE}
+irows=sapply(yy3$used_rows, function(x){x[1]});irows
+aa4=archetypal(df=df,kappas = 4,initialrows = irows,verbose = TRUE,rseed=9102,save_history = TRUE)
+yy4=check_Bmatrix(aa4$B)
+```
+Yes, we obtained a reduction of $33\%$ in iterations with exactly the same results and SSE, varexpl.
+
+Now it is time to plot all the above results, like the 2D demo case.
+
+```{r plot3DBetas, echo=FALSE,out.width='100%', fig.align='center',fig.width=17, fig.height=9}
+scatter3D(x=dp$x,y=dp$y,z=dp$z,colvar=NULL,lwd = 2, d = 3,xlab='x',ylab='y',zlab='z',theta=120,phi=15,
+          main = "Archetypes and Used Points", bty ="g",ticktype = "detailed",col='black',pch=10,cex=2.5)
+points3D(x=df$x,y=df$y,z=df$z,col='blue',add=TRUE,pch=19)
+archs3=data.frame(aa4$BY)
+points3D(archs3$x,archs3$y,archs3$z,col='blue',add=TRUE,pch=15,cex=2.5)
+pp3=lapply(yy4$used_rows,function(x,df){
+  dh=df[x,]
+  points3D(x=dh$x,y=dh$y,z=dh$z,col='red',add=TRUE,pch=19,cex=1.5)
+  if(length(x)!=1){segments3D(x0=dh$x[1],y0=dh$y[1],z0=dh$z[1],x1=dh$x[2],y1=dh$y[2],z1=dh$z[2],col='red',add=TRUE,lwd=3) }
+  },df)
+```
+
+There exist two archetypes as exact CH vertices, one lies closer to a CH vertex and another one is at the middle 
+of the line segment connecting two CH other vertices.
+
+Additionally we observe that archetypes are close to the "invisible" generators of the data set (circled cross, not included in data frame).
+
+## Searching for the most efficient initial points
+
+Extensive work on AA has shown next strong results:
+
+  1. if initial solution is far from convex hull (CH) vertices, then probably AA will stuck
+  2. not all CH vertices are suitable as candidate initial points, but only the outmost of them
+  3. if we choose the finally used points with greatest weights, then computation is faster
+  
+
+In order to take into account the above empirical results, we have developed five functions and now we run them and check if their outputs
+are close to CH vertices for the 3D data frame we studied just before.
+Of course we need the CH vertices of new 3D data frame. Now we are going to use "convhulln" from package "geometry" for computing the CH vertices:
+
+```{r, ch3,echo=TRUE}
+ch=unique(do.call(c,as.list(geometry::convhulln(df,'Fx'))))
+ch
+```
+
+#### Projected Convex Hull
+This is a method that can be used for all type of data frames, despite the number of variables $d$.
+That is the reason for being the default option in "method" used for finding initial solution.
+
+```{r find1, echo=TRUE}
+yy1=find_outmost_projected_convexhull_points(df,kappas=4)
+yy1$outmost
+yy1$outmostall
+yy1$outmostall%in%ch
+```
+#### Convex Hull
+This method actually can be used for data frames with $d\leq\,6$ variables, see http://www.qhull.org
+But if it can be used, it gives the best results due to the PCHA theory, see [1] for details.
+
+```{r find2, echo=TRUE}
+yy2=find_outmost_convexhull_points(df,kappas=4)
+yy2$outmost
+yy2$outmostall
+yy2$outmostall%in%ch
+```
+
+#### Partitioned Convex Hull
+This method is an approximation of CH when number of variables are $d>6$. It creates partitions of mutually exclusive points, 
+then it computes CH for each set and makes the union of vertices. Finally it computes the CH of that union, if it is feasible.
+(We avoid running because it uses parallel computing. Please check your machine and then run it.)
+
+```{r find3, echo=TRUE}
+# yy3=find_outmost_partitioned_convexhull_points(df,kappas=4,nworkers = 10)
+# yy3$outmost
+# yy3$outmostall
+# yy3$outmostall%in%ch
+# 1 . 2 . 3 . 4 . 5 . 6 . 7 . 8 . 9 . 10 .   
+# Time difference of 2.769091 secs
+# [1] 84  3
+# [1] 61 64 82 67
+# [1] 61 64 82 67
+# [1] TRUE TRUE TRUE TRUE
+```
+        
+#### Furthest Sum
+This is the default method used in PCHA. Here we just apply it many times and then find the unique points.
+The most frequent ones are used as initial solution.
+(We don't run for same reasons as Partitioned Convex Hull).
+
+```{r find4, echo=TRUE}
+# yy4=find_furthestsum_points(df, kappas=4, nfurthest = 100, nworkers = 10,sortrows = TRUE)
+# yy4$outmost
+# yy4$outmostall
+# yy4$outmostall%in%ch
+# [1] 56 61 64 67
+# [1] 56 61 64 67
+# [1] TRUE TRUE TRUE TRUE
+```
+#### Outmost   
+This method is the most naive one, but also the most simple.
+Keep in mind that for a data frame with dimensions $n\times\,d$ you'll need $\frac{8\,n^2}{2^{30}}=\frac{n^2}{2^{27}}$ GB RAM for numeric entries,
+so use it with caution!
+
+```{r find5, echo=TRUE}        
+yy5=find_outmost_points(df,kappas=4)
+yy5$outmost
+yy5$outmostall
+yy5$outmostall%in%ch
+```
+
+*From our results we observe that Projected and Partitioned Convex Hull methods gave the same results
+as the Convex Hull.* 
+
+This is extremely useful because, as we can see from trials or if we just read http://www.qhull.org ,
+computing CH is not a feasible process when number of variables increases. Actually only if $d\leq\,6$ it is
+meaningful to directly compute it.
+
+
+## Please send your comments, suggestions or bugs found to dchristop@econ.uoa.gr
+
+
+## References
+
+[1] M Morup and LK Hansen, "Archetypal analysis for machine learning and data mining", Neurocomputing (Elsevier, 2012). https://doi.org/10.1016/j.neucom.2011.06.033.
+
+[2] Source: http://www.mortenmorup.dk/index_files/Page327.htm , last accessed 2019-06-07
