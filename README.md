@@ -12,10 +12,14 @@ Basic functions are:
 -   `find_outmost_convexhull_points` CH initial solution.
 -   `find_outmost_partitioned_convexhull_points()` Partitioned CH
     initial solution.
--   `find_furthestsum_points()` Furthests Sum initial solution.
+-   `find_furthestsum_points()` Furthest Sum initial solution.
 -   `find_outmost_points()` Outmost initial solution.
--   `check_Bmatrix()` check B matrix after run of AA.
 -   `find_optimal_kappas()` search for the optimal number of archetypes
+-   `find_pcha_optimal_parameters()` search for the optimal updating
+    parameters of PCHA algorithm 
+-   `check_Bmatrix()` check B matrix after run of AA.
+-   `study_AAconvergence()` study the convergence of PCHA algorithm
+-   `find_closer_points()` find the closer to archetypes data points
 
 Install the archetypal package and then read
 `vignette("archetypal", package = "archetypal")`.
@@ -35,8 +39,8 @@ Usage
 library(archetypal)
 
 data("wd2")
-df=wd2
-aa=archetypal(df=df,kappas = 3,verbose = FALSE,rseed=9102,save_history = TRUE)
+df = wd2
+aa = archetypal(df = df, kappas = 3,verbose = FALSE, rseed = 9102)
 
 # Time for computing Projected Convex Hull was 0.01 secs 
 # Next projected convex hull initial solution will be used... 
@@ -85,5 +89,5 @@ aa=archetypal(df=df,kappas = 3,verbose = FALSE,rseed=9102,save_history = TRUE)
 Contact
 -------
 
-Please send comments, suggestions or bug breports to
-dchristop$econ.uoa.gr
+Please send comments, suggestions or bug reports to
+<dchristop@econ.uoa.gr> or <dem.christop@gmail.com>
