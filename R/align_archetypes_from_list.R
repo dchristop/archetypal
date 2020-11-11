@@ -1,5 +1,5 @@
 align_archetypes_from_list=function (archs_list, given_arch = NULL, varnames = NULL, ndigits = 0, 
-          parallel = FALSE, nworkers = NULL) 
+          parallel = FALSE, nworkers = NULL, verbose = TRUE) 
 {
   ndims = prod(sapply(apply(sapply(archs_list, function(x) {
     dim(x)
@@ -47,23 +47,25 @@ align_archetypes_from_list=function (archs_list, given_arch = NULL, varnames = N
     mp = data.frame(table(dphrases$phrase))
     mp2 = mp[order(-mp$Freq), ]
     if(length(unique(mp2$Freq))==1){
-      message(paste0("All phrases have equal frequency..."))
+      if(verbose){message(paste0("All phrases have equal frequency..."))}
       ii = sample(1:dim(mp2)[1],1)
-      message(paste0("Lets choose in random the ... ",ii))
+      if(verbose){message(paste0("Lets choose in random the ... ",ii))}
     }else{
       mpmost = as.character(mp2[1, 1])
       imatch = which(dphrases$phrase %in% mpmost)
       mimatch=matrix(imatch,ncol=length(imatch)/k)
       #
-      message(paste0("Most frequent phrases found at trials ... ",imatch))
+      if(verbose){message(paste0("Most frequent phrases found at trials ... ",imatch))}
       ii = sample(mimatch[1,], 1)
-      message(paste0("We choose most frequent which is ... ",ii))
+      if(verbose){message(paste0("We choose most frequent which is ... ",ii))}
     }
     dakrows=ii:(ii+k-1)
     arch_guide = dak[dakrows, varnames]
   }
-  message(paste0("Guide archetype will be next:"))
-  print(arch_guide)
+  if(verbose){
+    message(paste0("Guide archetype will be next:"))
+    print(arch_guide)
+  }
   archguide = t(arch_guide)
   if (!parallel) {
     dlist = lapply(archs_list, function(archs, archguide) {
@@ -93,7 +95,7 @@ align_archetypes_from_list=function (archs_list, given_arch = NULL, varnames = N
       }
     }
     tp1 = Sys.time()
-    message(tp1)
+    if(verbose){message(tp1)}
     fall = function(j, archs_list, archguide) {
       archs = archs_list[[j]]
       dj = sapply(as.list(data.frame(t(archs))), function(x, 
@@ -112,12 +114,12 @@ align_archetypes_from_list=function (archs_list, given_arch = NULL, varnames = N
                                         fall, archs_list, archguide)
     stopCluster(cl)
     tp2 = Sys.time()
-    print(tp2 - tp1)
+    if(verbose){print(tp2 - tp1)}
   }
   outlist = list(arch_guide = arch_guide, phrases_most = mp2, 
                  archs_aa_output = dak, archs_aligned = archs_aligned)
   T2 = Sys.time()
   TT=T2-T1
-  message(TT)
+  if(verbose){message(TT)}
   return(outlist)
 }

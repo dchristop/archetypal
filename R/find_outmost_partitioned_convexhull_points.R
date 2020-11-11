@@ -1,4 +1,4 @@
-find_outmost_partitioned_convexhull_points=function(df,kappas,np=10,nworkers=NULL){
+find_outmost_partitioned_convexhull_points=function(df, kappas, np = 10, nworkers = NULL){
   # Define number of workers if necessary
   if(is.null(nworkers)){
     nwall=parallel::detectCores()

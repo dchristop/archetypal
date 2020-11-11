@@ -1,4 +1,4 @@
-find_outmost_points=function(df,kappas){
+find_outmost_points=function(df, kappas){
   # Flatten data frame
   rownames(df)=1:dim(df)[1]
   # Find distances between rows:

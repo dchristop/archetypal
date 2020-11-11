@@ -1,11 +1,11 @@
 \name{find_outmost_partitioned_convexhull_points}
 \alias{find_outmost_partitioned_convexhull_points}
-\title{Function which finds the outmost convex hull points after making
-np samples and findix convex hull for each of them.
-To be used as initial solution in archetypal analysis.}
+\title{Function which finds the outermost convex hull points after making
+np samples and finding convex hull for each of them.
+}
 \description{
-Function which finds the outmost convex hull points after making
-np samples and findix convex hull for each of them.
+Function which finds the outermost convex hull points after making
+\code{np} samples and finding convex hull for each of them.
 To be used as initial solution in archetypal analysis
 }
 \usage{
@@ -24,18 +24,18 @@ find_outmost_partitioned_convexhull_points(df, kappas, np = 10,
 \value{
 A list with members:
 \enumerate{
-  \item outmost, the first kappas outmost points as rows of data frame
-  \item outmostall, all the outmost points that have been found as rows of data frame
-  \item outmostfrequency, a matrix with frequency and cumulative frequency for outmost rows
+  \item outmost, the first kappas most frequent outermost points as rows of data frame
+  \item outmostall, all the outermost points that have been found as rows of data frame
+  \item outmostfrequency, a matrix with frequency and cumulative frequency for outermost rows
 }
 }
 \examples{
 data("wd2") #2D demo 
-df=wd2
-yy=find_outmost_partitioned_convexhull_points(df,kappas=3,nworkers = 1)
-yy$outmost #the rows of 3 outmost points
-df[yy$outmost,] #the 3 outmost points
-yy$outmostall #all outmost rows
+df = wd2
+yy = find_outmost_partitioned_convexhull_points(df, kappas = 3, nworkers = 2)
+yy$outmost #the rows of 3 outermost points
+df[yy$outmost,] #the 3 outermost points
+yy$outmostall #all outermost rows
 yy$outmostfrequency #their frequency
 }
 \seealso{

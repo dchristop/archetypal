@@ -1,8 +1,11 @@
-archetypal=function(df,kappas,initialrows=NULL,method='projected_convexhull',nprojected=2,npartition=10,nfurthest=10,
-                    maxiter=2000,conv_crit=1E-06,var_crit=0.9999,verbose=TRUE,rseed=NULL,
-                    aupdate1=25,aupdate2=10,bupdate=10,muAup=1.2,muAdown=0.5,muBup=1.2,muBdown=0.5,
-                    SSE_A_conv=1e-9,SSE_B_conv=1e-9,
-                    save_history =FALSE,nworkers=NULL){
+archetypal=function(df, kappas, initialrows = NULL, method = 'projected_convexhull',
+                    nprojected = 2 , npartition = 10, nfurthest = 10,
+                    maxiter = 2000, conv_crit = 1E-06, var_crit = 0.9999, 
+                    verbose = TRUE, rseed = NULL,
+                    aupdate1 = 25, aupdate2 = 10, bupdate = 10, muAup = 1.2, 
+                    muAdown = 0.5, muBup = 1.2, muBdown = 0.5,
+                    SSE_A_conv = 1e-9, SSE_B_conv = 1e-9,
+                    save_history = FALSE, nworkers = NULL){
   # External Package usage: Matrix
   # Function that computes the PCHA for a data frame. 
   # It provides full control to the entire set of used parameters.
@@ -226,13 +229,15 @@ archetypal=function(df,kappas,initialrows=NULL,method='projected_convexhull',npr
     #############################################################
     if(kappas==1 & method!='furthestsum'){
       mdf=colMeans(df)
-      dd=sqrt(rowSums((df-t(mdf))^2))
+      dd=sqrt(colSums((t(df)-mdf)^2))
       irows=which.min(dd)
       freqstable=data.frame("outmostrows"=irows,"Freq"=1, "FreqPerCent"=1,"CumFreqPerCent"=1)
       YS=data.frame(df[irows,])
+      if(verbose){
       cat('Next initial solution will be used...','\n')
       print(YS)
       cat(" ",'\n')
+      }
     }else{
       #
       ####################################
@@ -254,7 +259,7 @@ archetypal=function(df,kappas,initialrows=NULL,method='projected_convexhull',npr
           }
         }
         t1=Sys.time()
-        projch=find_outmost_projected_convexhull_points(df,kappas = kappas,n=nprojected)
+        projch=find_outmost_projected_convexhull_points(df, kappas = kappas, npr = nprojected)
         t2=Sys.time();t12=round(as.numeric(t2-t1,units="secs"),digits=2) 
         message(paste0('Time for computing Projected Convex Hull was ',t12," secs"))
         irows=projch$outmost
@@ -284,7 +289,7 @@ archetypal=function(df,kappas,initialrows=NULL,method='projected_convexhull',npr
         }
       } else if(method =="partitioned_convexhull"){
         t1=Sys.time()
-        parch=find_outmost_partitioned_convexhull_points(df,kappas,np=npartition,nworkers = nworkers)
+        parch=find_outmost_partitioned_convexhull_points(df, kappas, np = npartition, nworkers = nworkers)
         t2=Sys.time();t12=round(as.numeric(t2-t1,units="secs"),digits=2) 
         message(paste0('Time for computing Partitioned Convex Hull was ',t12," secs"))
         irows=parch$outmost
@@ -433,8 +438,10 @@ archetypal=function(df,kappas,initialrows=NULL,method='projected_convexhull',npr
   t2=Sys.time();t12=round(as.numeric(t2-t1,units="secs"),digits=2) #print time for initial 'aupdate1' A updates
   if(verbose){cat(paste0("Time for the ",aupdate1," initial A updates was ",t12," secs"),'\n')}
   # Define print layout
-  dheader = sprintf('%12s | %12s | %15s | %10s | %10s | %10s | %10s | %12s | %12s','Iteration','VarExpl.','SSE','|dSSE|/SSE','muB','muA',' Time(s) ','nAup_nAdown','nBup_nBdown');
-  dline = sprintf('|------------|--------------|-----------------|------------|------------|------------|------------|--------------|-------------|')
+  dheader = sprintf('%6s|%10s| %12s | %9s | %9s| %9s|%7s|%7s|%7s',
+                    'Iter','VarExpl','SSE','|dSSE|/SSE','muB','muA','t(sec)','Aup;dwn','Bup;dwn');
+  dline = sprintf('|-----|----------|--------------|------------|----------|----------|-------|-------|-------|')
+  #
   #
   ###########################################
   # Set parameters for main iteration section
@@ -452,7 +459,7 @@ archetypal=function(df,kappas,initialrows=NULL,method='projected_convexhull',npr
       cat(paste0('Optimal solution was found from FurthestSum because Variance Explained = ',round(varexplv,6),' > ',var_crit),'\n')
       cat(" ",'\n')
       cat(dheader,"\n");cat(dline,"\n")
-      cat(sprintf('%12.0f | %12.6f | %15.6e | %10.2e | %10.2e | %10.2e | %10.2f | %12s | %12s \n',iter,varexplv,SSE,abs(dSSE)/SSE,muB,muA,t1-t1,paste0(c(nAup,nAdown),collapse = "_"),paste0(c(nBup,nBdown),collapse = "_")))
+      cat(sprintf('%5.0f | %8.6f | %12.6e | %10.2e | %7.2e | %7.2e | %5.1f | %5s | %5s \n',iter,varexplv,SSE,abs(dSSE)/SSE,muB,muA,t1-t1,paste0(c(nAup,nAdown),collapse = "_"),paste0(c(nBup,nBdown),collapse = "_")))
       cat(dline,"\n")
     }
     # Sort components according to their importance
@@ -501,8 +508,7 @@ archetypal=function(df,kappas,initialrows=NULL,method='projected_convexhull',npr
   }else{
     run_results=NULL
   }
-  #
-  #
+  #  
   if(verbose){cat(dline,"\n");cat(dheader,"\n");cat(dline,"\n")}
   while(abs(dSSE)>=conv_crit*abs(SSE) & iter<maxiter & varexplv<var_crit){
     t1=Sys.time() #count iteration time
@@ -514,10 +520,7 @@ archetypal=function(df,kappas,initialrows=NULL,method='projected_convexhull',npr
     nBup_old=nBup;nBdown_old=nBdown
     nAup_old=nAup;nAdown_old=nAdown
     #
-    # 
-    ######################
-    # AtY=t(A)%*%Y
-    AtY=crossprod(A,Y) #efficient way of computing
+    AtY=crossprod(A,Y) 
     #
     # Update B 
     #
@@ -564,12 +567,11 @@ archetypal=function(df,kappas,initialrows=NULL,method='projected_convexhull',npr
       archslist[[iter]]=data.frame(as.matrix(BY))
     }
     #
-    if(verbose){
-      cat(sprintf('%12.0f | %12.9f | %15.9e | %10.2e | %10.2e | %10.2e | %10.2f | %12s | %12s \n',iter,varexplv,SSE,abs(dSSE)/SSE,muB,muA,t12,
-                  paste0(c(nAup-nAup_old,nAdown-nAdown_old),collapse = "_"),paste0(c(nBup-nBup_old,nBdown-nBdown_old),collapse = "_")))
-    }
-    #
-  }
+    if(verbose){     
+      cat(sprintf('%5.0f | %8.6f | %12.6e | %10.2e | %7.2e | %7.2e | %5.1f | %5s | %5s \n',iter,varexplv,SSE,abs(dSSE)/SSE,muB,muA,t12,
+                  paste0(c(nAup-nAup_old,nAdown-nAdown_old),collapse = ";"),paste0(c(nBup-nBup_old,nBdown-nBdown_old),collapse = ";")))
+                  }
+  }                 
   #
   if(verbose){cat(dline,"\n")}
   # Sort components according to their importance by inspecting weights of matrix A

@@ -1,6 +1,6 @@
 \name{FurthestSum}
 \alias{FurthestSum}
-\title{Application of FurthestSum Algorithm in Order to Find an Intial Solution for Archetypal Analyis}
+\title{Application of FurthestSum algorithm in order to find an initial solution for Archetypal Analysis}
 \usage{
 FurthestSum(Y, kappas, irows, exclude = NULL)
 }
@@ -23,16 +23,15 @@ data frames in R.
 }
 \examples{
 data("wd3") #3D demo 
-df=wd3
-FurthestSum(df,kappas=4,irows=sample(1:dim(df)[1],1))
+df = wd3
+FurthestSum(df, kappas = 4, irows = sample(1:dim(df)[1],1))
 }
 \references{
 [1] Source: http://www.mortenmorup.dk/index_files/Page327.htm , last accessed 2019-06-07
 
-[2] D.S.Hochbaum,D.B.Shmoys,A best possible heuristic for the k-center problem,
-
-   Math.Oper.Res.10(2)(1985)180–184. https://doi.org/10.1287/moor.10.2.180
+[2] D.S. Hochbaum, D.B. Shmoys, A best possible heuristic for the k-center problem, \cr
+   Math. Oper. Res. 10(2) (1985) 180-184. https://doi.org/10.1287/moor.10.2.180
 }
 \seealso{
-\code{\link{find_furthestsum_points}}.
+\code{\link{find_furthestsum_points}}
 }

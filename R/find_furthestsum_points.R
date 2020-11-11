@@ -1,22 +1,39 @@
-find_furthestsum_points=function(df,kappas,nfurthest=100,nworkers=10,sortrows=TRUE){
-  #
-  #Initialize
+find_furthestsum_points=function(df, kappas, nfurthest = 100, nworkers = NULL,
+                                 sortrows = TRUE, doparallel = TRUE){
+  # Check logical processors and define "nworkers" if necessary
+  if(doparallel){
+    nwa=parallel::detectCores()
+    if(is.null(nworkers)){
+      ifelse(nwa>2,{nworkers=nwa-2},{nworkers=nwa})
+    }else{
+      if(nworkers>nwa){nworkers=nwa}
+    }
+  }
+  # Initialize
   Y=as.matrix(df)
   NN=1:dim(Y)[1]
-  # FurthestSum algorithm applications by using 'nfurthest' input
+  # Do 'nfurthest' applications of FurthestSum algorithm 
   if(kappas!=1){
-    #In parallel
     #Function:
     ifelse(sortrows,
            {runfs=function(j,Y,kappas,NN){sort(FurthestSum(Y=Y,kappas=kappas,irows=sample(NN,1)))}},
            {runfs=function(j,Y,kappas,NN){FurthestSum(Y=Y,kappas=kappas,irows=sample(NN,1))}})
-    # runfs=function(j,Y,kappas,NN){FurthestSum(Y=Y,kappas=kappas,irows=sample(NN,1))}
     environment(runfs) <- .GlobalEnv
-    cl <- makeCluster(nworkers);registerDoParallel(cl);clusterEvalQ(cl=cl, library("Matrix"));
-    clusterExport(cl=cl,varlist='FurthestSum');
-    tfsum=t(parallel::parSapply(cl=cl,1:nfurthest,runfs,Y=Y,kappas=kappas,NN=NN))
-    stopCluster(cl)
-    #
+    # Choose computation mode and proceed
+    if(doparallel){
+      #In parallel
+      cl <- makeCluster(nworkers);registerDoParallel(cl)
+      clusterEvalQ(cl=cl, library("Matrix"))
+      clusterExport(cl=cl,varlist='FurthestSum')
+      tfsum=t(parallel::parSapply(cl=cl,1:nfurthest,runfs,Y=Y,kappas=kappas,NN=NN))
+      stopCluster(cl)
+      #
+    }else{
+      #In serial
+      tfsum=t(sapply(1:nfurthest,runfs,Y=Y,kappas=kappas,NN=NN))
+      #
+    }
+    # Find outermost points
     outmostrows=do.call(c,as.list(tfsum))
     di=as.data.frame(table(outmostrows),stringsAsFactors = F)
     di=di[order(-di$Freq),]

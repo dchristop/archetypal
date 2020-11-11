@@ -1,4 +1,4 @@
-FurthestSum=function(Y,kappas,irows,exclude=NULL){
+FurthestSum=function(Y, kappas, irows, exclude=NULL){
   #Package usage: Matrix
   #Initialize
   N=dim(Y)[1]  

@@ -1,8 +1,9 @@
 \name{archetypal}
 \alias{archetypal}
-\title{archetypal: Finds the archetypal analysis of a data frame by using a modified version of PCHA algorithm}
+\title{archetypal: Finds the archetypal analysis of a data frame by using a variant of the PCHA algorithm}
 \description{
-Performs archetypal analysis by using Convex Hull approximation under a full control of all algorithmic parameters. 
+Performs archetypal analysis by using Principal Convex Hull Analysis (PCHA) 
+under a full control of all algorithmic parameters. 
 }
 \usage{
 archetypal(df, kappas, initialrows = NULL,
@@ -34,7 +35,8 @@ archetypal(df, kappas, initialrows = NULL,
 
 \item{npartition}{The number of partitions for \code{\link{find_outmost_partitioned_convexhull_points}}}
 
-\item{nfurthest}{The number of times that \code{\link{FurthestSum}}  algorithm will be applied}
+\item{nfurthest}{The number of times that \code{\link{FurthestSum}} algorithm will be applied
+by \code{\link{find_furthestsum_points}} }
 
 \item{maxiter}{The maximum number of iterations for main algorithm application}
 
@@ -44,9 +46,9 @@ archetypal(df, kappas, initialrows = NULL,
 
 \item{verbose}{If it is set to TRUE, then both initialization and iteration details are printed out}
 
-\item{rseed}{The random seed that will be used for seting initial A matrix. Useful for reproducible results.}
+\item{rseed}{The random seed that will be used for setting initial A matrix. Useful for reproducible results.}
 
-\item{aupdate1}{The number of intial applications of Aupdate for improving the initially randomly selected A matrix}
+\item{aupdate1}{The number of initial applications of Aupdate for improving the initially randomly selected A matrix}
 
 \item{aupdate2}{The number of Aupdate applications in main iteration}
 
@@ -69,50 +71,56 @@ Warning: there exists a Matlab crash sometimes after setting this to 1E-16 or lo
 \item{save_history}{If set TRUE, then iteration history is being saved for further use}
 
 \item{nworkers}{The number of logical processors that will be used for
-parallel computing (usually it is the double of available physical cores)}
+parallel computing (usually it is the double of available physical cores).
+Parallel computation is applied when asked by functions \code{\link{find_furthestsum_points}},\cr 
+\code{\link{find_outmost_partitioned_convexhull_points}} and \cr \code{\link{find_outmost_projected_convexhull_points}}.
+}
 }
 \value{
 A list with members:
 \enumerate{
-\item BY, the \eqn{kappas \times d} matrix of archetypes found
-\item A, the \eqn{n \times kappas} matrix such that Y ~ Y - ABY or Frobenius norm ||Y-ABY|| is minimum
-\item B, the \eqn{kappas \times n} matrix such that Y ~ Y - ABY or Frobenius norm ||Y-ABY|| is minimum
-\item SSE, the sum of squared error SSE = ||Y-ABY||^2
-\item varexpl, the Variance Explained =(SST-SSE)/SST where SST is the total sum of squares for data set matrix
-\item initialsolution, the initially used set of rows from data frame in order to start the algorithm
-\item freqstable, the frequency table for all found rows, if it is available.
-\item iterations, the number of main iterations done by algorithm
-\item time, the time in seconds that was spent from entire run 
-\item converges, if it is TRUE, then convegence was achieved before the end of maximum allowed iterations
-\item nAup, the total number of times when it was SSE<=SSE_old(1+SSE_A_conv) in Aupdate processes. Useful for debugging purposes.
-\item nAdown The total number of times when it was SSE>SSE_old(1+SSE_A_conv) in Aupdate processes. Useful for debugging purposes.
-\item nBup, the total number of times when it was SSE<=SSE_old(1+SSE_B_conv) in Bupdate processes. Useful for debugging purposes.
-\item nBdown, the total number of times when it was SSE>SSE_old(1+SSE_A_conv in Bupdate processes. Useful for debugging purposes.
-\item run_results, a list of iteration related details: SSE, varexpl, time, B, BY for all iterations done.
+\item \code{BY}, the \eqn{kappas \times d} matrix of archetypes found
+\item \code{A}, the \eqn{n \times kappas} matrix such that Y ~ ABY or Frobenius norm ||Y-ABY|| is minimum
+\item \code{B}, the \eqn{kappas \times n} matrix such that Y ~ ABY or Frobenius norm ||Y-ABY|| is minimum
+\item \code{SSE}, the sum of squared error SSE = ||Y-ABY||^2
+\item \code{varexpl}, the Variance Explained = (SST-SSE)/SST where SST is the total sum of squares for data set matrix
+\item \code{initialsolution}, the initially used set of rows from data frame in order to start the algorithm
+\item \code{freqstable}, the frequency table for all found rows, if it is available.
+\item \code{iterations}, the number of main iterations done by algorithm
+\item \code{time}, the time in seconds that was spent from entire run 
+\item \code{converges}, if it is TRUE, then convergence was achieved before the end of maximum allowed iterations
+\item \code{nAup}, the total number of times when it was SSE<=SSE_old(1+SSE_A_conv) in Aupdate processes. Useful for debugging purposes.
+\item \code{nAdown}, the total number of times when it was SSE>SSE_old(1+SSE_A_conv) in Aupdate processes. Useful for debugging purposes.
+\item \code{nBup}, the total number of times when it was SSE<=SSE_old(1+SSE_B_conv) in Bupdate processes. Useful for debugging purposes.
+\item \code{nBdown}, the total number of times when it was SSE>SSE_old(1+SSE_A_conv in Bupdate processes. Useful for debugging purposes.
+\item \code{run_results}, a list of iteration related details: SSE, varexpl, time, B, BY for all iterations done.
 }
 }
 \examples{
+{\donttest{
 # Create a small 2D data set from 3 corner-points:
-p1=c(1,2);p2=c(3,5);p3=c(7,3) 
-dp=rbind(p1,p2,p3);dp
+p1 = c(1,2);p2 = c(3,5);p3 = c(7,3) 
+dp = rbind(p1,p2,p3);dp
 set.seed(916070)
-pts=t(sapply(1:20, function(i,dp){
-  cc=runif(3)
-  cc=cc/sum(cc)
+pts = t(sapply(1:20, function(i,dp){
+  cc = runif(3)
+  cc = cc/sum(cc)
   colSums(dp*cc)
 },dp))
-df=data.frame(pts)
-colnames(df)=c("x","y")
+df = data.frame(pts)
+colnames(df) = c("x","y")
 # Run AA:
-aa=archetypal(df=df,kappas = 3,verbose=FALSE,save_history = TRUE)
+aa = archetypal(df = df, kappas  =  3, verbose = FALSE, save_history  =  TRUE)
 # Archetypes:
-archs=data.frame(aa$BY)
+archs = data.frame(aa$BY)
 archs
 # See main results:
 names(aa)
 aa[c("SSE","varexpl","iterations","time")]
 # See history of iterations:
 names(aa$run_results)
+}
+}
 }
 \references{
 
